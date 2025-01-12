@@ -8,6 +8,7 @@
   * load-piece animation
   * multiplayer (?)
 */
+
 c = document.querySelector('#c')
 c.width = 1920
 c.height = 1080
@@ -17,21 +18,71 @@ S = Math.sin
 t = 0
 T = Math.tan
 
-rsz = window.onresize = () =>{
-  let b = document.body
-  let margin = 10
-  let n
-  let d = .5625
-  if(b.clientHeight/b.clientWidth > d){
-    c.style.width = `${(n=b.clientWidth) - margin*2}px`
-    c.style.height = `${n*d - margin*2}px`
-  }else{
-    c.style.height = `${(n=b.clientHeight) - margin*2}px`
-    c.style.width = `${n/d - margin*2}px`
-  }
+// Add touch event listeners
+c.addEventListener('touchstart', handleTouchStart);
+c.addEventListener('touchmove', handleTouchMove);
+c.addEventListener('touchend', handleTouchEnd);
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+function handleTouchStart(e) {
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
 }
 
-rsz()
+function handleTouchMove(e) {
+  const touch = e.touches[0];
+  const touchX = touch.clientX;
+  const touchY = touch.clientY;
+
+  // Calculate angle for aiming
+  const rect = c.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height;
+
+  const dx = touchX - centerX;
+  const dy = touchY - centerY;
+
+  sTheta = Math.atan2(-dx, dy); // Update aiming angle
+  sTheta = Math.min(Math.PI / 2.125, Math.max(-Math.PI / 2.125, sTheta));
+}
+
+function handleTouchEnd(e) {
+  // Trigger shooting action
+  shoot();
+}
+
+// Adjust `shoot` to ensure compatibility
+function shoot() {
+  if (curShot.fired || shotTimer > t || roundover) return;
+  curShot.X_ = S(p = sTheta + Math.PI) * ls;
+  curShot.Y_ = C(p) * ls + 11 - ls / 2.5;
+  curShot.Z_ = 0;
+  curShot.vx2 = -S(p = sTheta) * shotSpeed;
+  curShot.vy2 = -C(p) * shotSpeed;
+  curShot.vz2 = 0;
+  curShot.fired = true;
+  shotTimer = t + shotTimerInterval;
+}
+
+// Ensure resizing scales correctly for touch devices
+rsz = window.onresize = () => {
+  const b = document.body;
+  const margin = 10;
+  let n;
+  const d = 0.5625;
+  if (b.clientHeight / b.clientWidth > d) {
+    c.style.width = `${(n = b.clientWidth) - margin * 2}px`;
+    c.style.height = `${n * d - margin * 2}px`;
+  } else {
+    c.style.height = `${(n = b.clientHeight) - margin * 2}px`;
+    c.style.width = `${n / d - margin * 2}px`;
+  }
+};
+
+rsz();
 
 async function Draw(){
   if(!t){
@@ -54,7 +105,7 @@ async function Draw(){
         Z+=oZ
       }
     }
-    
+
     R2=(Rl,Pt,Yw,m=false)=>{
       M=Math
       A=M.atan2
@@ -74,7 +125,7 @@ async function Draw(){
 
     Q = () => [c.width/2+X/Z*700, c.height/2+Y/Z*700]
     I=(A,B,M,D,E,F,G,H)=>(K=((G-E)*(B-F)-(H-F)*(A-E))/(J=(H-F)*(M-A)-(G-E)*(D-B)))>=0&&K<=1&&(L=((M-A)*(B-F)-(D-B)*(A-E))/J)>=0&&L<=1?[A+K*(M-A),B+K*(D-B)]:0
-    
+
     Normal = (facet, autoFlipNormals=false, X1=0, Y1=0, Z1=0) => {
       let ax = 0, ay = 0, az = 0
       facet.map(q_=>{ ax += q_[0], ay += q_[1], az += q_[2] })
@@ -95,7 +146,7 @@ async function Draw(){
       let X2_ = ax + (crs[0]*=flip), Y2_ = ay + (crs[1]*=flip), Z2_ = az + (crs[2]*=flip)
       return [X1_, Y1_, Z1_, X2_, Y2_, Z2_]
     }
-      
+
     async function loadOBJ(url, scale, tx, ty, tz, rl, pt, yw, recenter=true) {
       let res
       await fetch(url, res => res).then(data=>data.text()).then(data=>{
@@ -1041,7 +1092,7 @@ async function Draw(){
       a.src = v
       spheres = [...spheres, a]
     })
-    
+
     loadB = () => {
       cl  = 10
       rw  = 10
@@ -1058,9 +1109,9 @@ async function Draw(){
         return [X, Y, Z, vx, vy, vz, id, X, Y, Z]
       })
     }
-    
+
     freq = 2e3
-    
+
     advanceRows = () => {
       B.map(v=>{
         //v[1] += sp * (.75**.5/2)
@@ -1078,11 +1129,11 @@ async function Draw(){
       }
       rct++
     }
-    
+
     bg = new Image()
     bg.src = 'https://srmcgann.github.io/temp14/bobble_board.png?5'
-    
-    
+
+
     keys = Array(128).fill(false)
     c.onkeydown = e => {
       keys[e.keyCode] = true
@@ -1090,7 +1141,7 @@ async function Draw(){
     c.onkeyup = e => {
       keys[e.keyCode] = false
     }
-    
+
     shotTimer = 0
     shotTimerInterval = .25
     shotSpeed = .66
@@ -1105,7 +1156,7 @@ async function Draw(){
       curShot.fired = true
       shotTimer = t + shotTimerInterval
     }
-    
+
     sTv = -.0066
     drag   = 1.4
     drag2   = 10
@@ -1133,15 +1184,15 @@ async function Draw(){
               }else{
                 shoot()
               }
-              
+
             break;
           }
         }
       })
     }
-    
+
     c.focus()
-    
+
     loadShot = () => {
       if(roundover) return
       curShot = {
@@ -1162,7 +1213,7 @@ async function Draw(){
       }
       queue = [...queue, Rn()*sphereSrc.length|0]
     }
-    
+
     sparks = []
     iSparkv = .05
     spawnSparks = (X, Y, Z, id, mag=1) => {
@@ -1174,7 +1225,7 @@ async function Draw(){
         sparks = [...sparks, [X, Y, Z, vx, vy, vz, mag, id]]
       }
     }
-    
+
     init = (victory=false) => {
       if(typeof deathTimer !== 'undefined' && deathTimer >= t) return
       score = victory ? score : 0
@@ -1238,7 +1289,7 @@ async function Draw(){
         }
       })
     }
-    
+
     dropPieces = idx => {
       if(memo.filter(v=>v==idx).length) return
       memo = [...memo, idx]
@@ -1255,7 +1306,7 @@ async function Draw(){
         }
       })
     }
-    
+
     drawRotatedImage = (img,tx,ty,w,h,theta,ofx=0,ofy=0)=>{
       x.save()
       x.translate(tx,ty)
@@ -1263,7 +1314,7 @@ async function Draw(){
       x.drawImage(img,-w/2+ofx,-h/2+ofy,w,h)
       x.restore()
     }
-    
+
     placeCurShot = () => {
       if(roundover) return
       mind = 1e6
@@ -1327,7 +1378,7 @@ async function Draw(){
       }
       loadShot()
     }
-    
+
     death = new Image()
     death.src = 'https://srmcgann.github.io/temp13/gosper.jpg'
     vicpic = new Image()
@@ -1347,7 +1398,7 @@ async function Draw(){
   Rl  = 0
   Pt  = 0
   Yw  = 0
-  
+
   if(0)for(i=cl*(rw+1)*3;i--;){
     ofy2_ = rct%2 ? 0 : sp * (.75**.5/2)
     X = ((i%cl)-cl/2 + .5) * sp * 1.5 + ((i/cl|0)%2?sp*1.5/2:0) - sp/2.66
@@ -1367,19 +1418,19 @@ async function Draw(){
       x.fillRect(l[0]-s/2,l[1]-s/2,s,s)
     }
   }
-  
+
   sTheta += sThetav /= drag
-  
+
   sTheta = Math.min(Math.PI/2.125, Math.max(-Math.PI/2.125, sTheta))
-  
+
   if(sTheta == Math.PI/2.25 || sTheta == -Math.PI/2.25){
     sThetav = 0
   }
-  
+
   doKeys()
-  
+
   if(!roundover && !((t*60|0)%freq)) advanceRows()
-  
+
   homing  = 20
   homing2 = 2
   B.map((v, i) => {
@@ -1457,7 +1508,7 @@ async function Draw(){
     }
     stroke('#f00','',.5,false)
   })
-  
+
   sd = 16
   x.beginPath()
   for(i=sd+1; i--;) {
@@ -1472,7 +1523,7 @@ async function Draw(){
   col1 = '#f004'
   col2 = '#40f2'
   stroke(col1, col2, 10, true)
-  
+
   x.beginPath()
   X = S(p=sTheta + Math.PI) * ls
   Y = C(p) * ls + 9.5
@@ -1485,7 +1536,7 @@ async function Draw(){
   R(Rl,Pt,Yw,1)
   if(Z>0) x.lineTo(...Q())
   stroke(col1, '', 10, true)
-  
+
   // scaffolding
   ofx = 15.125
   //x.beginPath()
@@ -1514,7 +1565,7 @@ async function Draw(){
   //if(Z>0) x.lineTo(...Q())
   //stroke('#0f8','',1, false)
   // end scaffolding
-  
+
   iTv = .05
   tx = S(p=sTheta + Math.PI) * ls
   ty = C(p) * ls + 9.5
@@ -1526,7 +1577,7 @@ async function Draw(){
     Y3 = ty += vy
     X4 = X3 + vx
     Y4 = Y3 + vy
-    
+
     cont = true
     B.map(v=>{
       X = v[0]
@@ -1560,12 +1611,12 @@ async function Draw(){
         tx = l[0]
         ty = l[1]
       }
-      
+
       /*X3 = tx
       Y3 = ty
       X4 = X3 + vx
       Y4 = Y3 + vy*/
-      
+
       if(!(i%10)){
         x.beginPath()
         X = X3
@@ -1582,7 +1633,7 @@ async function Draw(){
       }
     }
   }
-  
+
   X = X4
   Y = Y4
   Z = 0
@@ -1594,7 +1645,7 @@ async function Draw(){
     s *= 1.75
     x.drawImage(starImgs[0].img,l[0]-s/2,l[1]-s/2,s,s)
   }
-  
+
   queue.map((v, i) => {
     prevLs = .5 / (.66+ i/40)
     X = -i * prevLs * 1.5 - 4
@@ -1652,7 +1703,7 @@ async function Draw(){
       }
     }
   }
-  
+
   if(roundover){
     x.globalAlpha = .66
     x.drawImage(victory ? vicpic : death, 0, 0, c.width, c.height)
@@ -1697,7 +1748,7 @@ async function Draw(){
       }
     })
   }
-  
+
   sparks = sparks.filter(v=>v[6] > 0)
   sparks.map(v => {
     X = v[0] += v[3]
@@ -1718,12 +1769,12 @@ async function Draw(){
     }
     v[6]-= .0125
   })
-  
+
   B = B.filter(v=> Math.hypot(v[0], v[1], v[2]) < 20)
   if(Math.hypot(curShot.X_,curShot.Y_,curShot.Z_) > 20){
     loadShot()
   }
-  
+
   if(!B.length) {
     roundover = true
     victory = true
